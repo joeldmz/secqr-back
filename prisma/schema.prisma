@@ -1,0 +1,212 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/prisma/client"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================
+// 1. SERVICIO DE AUTENTICACIÓN (Auth Service)
+// Gestiona quién puede usar el sistema (Administrador, Staff).
+// =============================================
+
+enum UserRole {
+  ADMIN
+  STAFF
+  USER // Puede ser el usuario principal que gestiona la familia
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String?   // Solo si el login es por usuario/contraseña
+  googleId        String?   @unique // Identificador de Google
+  fullName        String?
+  role            UserRole
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  
+  // Relaciones
+  // 1. Como el usuario principal que crea el evento/grupo
+  managedEvents   Event[] @relation("Owner")
+
+  // 2. Usuarios asociados a Grupos Familiares (si un Staff/Admin debe ser rastreado)
+  groupMembers GroupMember[] @relation("Owner")
+
+  // Dueño de Grupos Familiares
+  ownedFamilies FamilyGroup[]
+
+  // Tickets reportados por este usuario (StaffReporter)
+  staffReportedTickets LostPersonTicket[] @relation("StaffReporter")
+
+  // Tickets reportados por este usuario (si el usuario es el reportero)
+  reportedTickets LostPersonTicket[] @relation("Reporter")
+
+  // Logs generados por este usuario
+  auditLogs AuditLog[]
+}
+
+// =============================================
+// 2. GESTIÓN DE EVENTOS (Event/User Service)
+// =============================================
+
+model Event {
+  id                   String    @id @default(uuid())
+  name                 String
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  availabilityStart    DateTime? // Rango horario de disponibilidad
+  availabilityEnd      DateTime?
+  locationDetails      String    // Detalle logístico
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  // Relación de Dueño del Evento (Owner)
+  ownerId              String
+  owner                User      @relation("Owner", fields: [ownerId], references: [id])
+  
+  // Participantes en este evento
+  participants         Participant[]
+
+  // Puntos de Encuentro (PE)
+  meetingPoints        PointOfMeeting[]
+}
+
+// Define los Puntos de Encuentro (PE) para un Evento específico
+model PointOfMeeting {
+  id          String    @id @default(uuid())
+  name        String
+  coordinates String    // Ejemplo: "Lat, Lon"
+  description String?
+
+  // Evento al que pertenece
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id])
+
+  // Tickets reportados desde este punto
+  reportedFromTickets LostPersonTicket[]
+  
+  @@index([eventId])
+}
+
+// =============================================
+// 3. GESTIÓN DE PARTICIPANTES Y GRUPOS (Familia/QR)
+// =============================================
+
+model FamilyGroup {
+  id          String    @id @default(uuid())
+  name        String    // Nombre del grupo familiar
+  createdAt   DateTime  @default(now())
+
+  // El User que gestiona este grupo
+  ownerId     String    
+  owner       User      @relation(fields: [ownerId], references: [id])
+
+  //Miembros del grupo
+  members     GroupMember[]
+ 
+  @@index([ownerId])
+}
+
+// Representa a un individuo dentro de un grupo familiar.
+model GroupMember {
+  id              String    @id @default(uuid())
+  fullName        String
+  alias           String?
+  parentesco      String // ej: Hijo, Cónyuge, Yo
+  createdAt       DateTime  @default(now())
+
+  // grupo al que pertenece
+  groupId         String
+  group           FamilyGroup @relation(fields: [groupId], references: [id])
+  
+  // Relación con su inscripción en eventos
+  participations  Participant[]
+  
+  // Relación inversa de miembros: La colección de todos los miembros de este grupo
+  // groupMembers    GroupMember[]
+
+  // Usuario asociado (opcional, si el miembro ya tiene un registro de usuario)
+  ownerId  String?
+  owner User? @relation("Owner", fields: [ownerId], references: [id])
+  
+  @@index([groupId])
+}
+
+// Un participante es un vínculo entre un Miembro y un Evento, y lleva el TUIE.
+model Participant {
+  id                String    @id @default(uuid())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // relacion con GroupMember
+  memberId          String
+  member            GroupMember @relation(fields: [memberId], references: [id])
+  
+  // Relación con event
+  eventId           String
+  event             Event     @relation(fields: [eventId], references: [id])
+  
+  // Identificación QR
+  tuiUniqueId       String    @unique // Token Único de Identificación de Evento (TUIE)
+  status            String    // Ej: GENERADO, ACTIVO, INACTIVO, REVOCADO
+  checkInTime       DateTime? // Hora de entrada
+  
+  lostPersonTickets LostPersonTicket[]
+  
+  // Asegura que un miembro no pueda participar dos veces en el mismo evento
+  @@unique([memberId, eventId])
+}
+
+// =============================================
+// 4. GESTIÓN DE INCIDENTES Y TRAZABILIDAD
+// =============================================
+
+// Trazabilidad de todas las acciones críticas (RF-ADM-004)
+model AuditLog {
+  id        String    @id @default(uuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  action    String    // Ej: CREAR_EVENTO, ESCANEAR_CHECKIN, REPORTE_EXTRAVIO
+  entity    String    // Entidad afectada (Ej: Evento, Participante)
+  entityId  String    // ID del registro afectado
+  details   String    // Detalles de la acción o mensaje
+  timestamp DateTime  @default(now())
+}
+
+// Ticket de Reporte de Extravío (RF-ERR-003)
+model LostPersonTicket {
+  id          String    @id @default(uuid())
+  description  String   // Descripción detallada de lo encontrado
+  status       String   // Ej: En Proceso, Cerrado
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Quién reporta (Puede ser Staff o Usuario)
+  reporterId  String
+  reporter    User?     @relation("Reporter", fields: [reporterId], references: [id])
+
+  staffUserId String?
+  staffUser   User?     @relation("StaffReporter", fields: [staffUserId], references: [id])
+  
+  
+  // Participante asociado (el QR escaneado)
+  relatedParticipantId String?
+  relatedParticipant   Participant? @relation(fields: [relatedParticipantId], references: [id])
+  
+  // Ubicación y Contacto
+  meetingPointId String? // PE asociado
+  meetingPoint   PointOfMeeting? @relation(fields: [meetingPointId], references: [id])
+  
+  // Notas de coordinación
+  coordinationNotes String?
+}
