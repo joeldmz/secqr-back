@@ -1,5 +1,5 @@
-import { HttpStatus } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { HttpException, HttpStatus } from '@nestjs/common';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/client';
 
 // Definimos una estructura para el error manejado
 export class DatabaseError {
@@ -15,6 +15,15 @@ export class DatabaseError {
  */
 export class PrismaErrorService {
   static mapError(error: any): DatabaseError {
+
+    if (error instanceof PrismaClientValidationError) {
+      return new DatabaseError(
+        HttpStatus.BAD_REQUEST, 
+        'Faltan argumentos requeridos.', 
+        error
+      );
+    }
+
     if (error instanceof PrismaClientKnownRequestError) {
 
       const code = error?.code || 'UNKNOWN_PRISMA_ERROR';
@@ -23,7 +32,7 @@ export class PrismaErrorService {
       let httpStatus = HttpStatus.BAD_REQUEST;
 
       if (code === 'P2002') { // Unique constraint failed
-        message = 'El email ya existe. Verifique que los datos sean únicos.';
+        message = 'El email ya existe.';
         httpStatus = HttpStatus.CONFLICT;
       } else if (code === 'P2012') { // Missing required argument
         message = 'Faltan argumentos requeridos en la base de datos.';
@@ -38,6 +47,15 @@ export class PrismaErrorService {
       }
       
       return new DatabaseError(httpStatus, message, error);
+    }
+
+    if(error instanceof HttpException) {
+      const exceptionError = error as HttpException;
+      return new DatabaseError(
+            exceptionError.getStatus(),
+            exceptionError.getResponse().toString(),
+            error
+      );
     }
 
     // 3. Manejar otros errores generales (ej. errores de conexión)
