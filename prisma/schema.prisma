@@ -27,9 +27,12 @@ enum UserRole {
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
+  firstName       String
+  lastName        String
+  alias           String?
+  age             Int?
   password        String   // Solo si el login es por usuario/contraseña
   googleId        String?   @unique // Identificador de Google
-  fullName        String
   role            UserRole
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())

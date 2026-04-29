@@ -14,7 +14,7 @@ export class UserController {
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Usuario creado exitosamente.' })
   create(@Body() userDto: User) {
     try {
-      if(!userDto.email || !userDto.password || !userDto.fullName) {
+      if(!userDto.email || !userDto.password || !userDto.firstName || !userDto.lastName ) {
         throw new HttpException('Email, password, and full name are required.', HttpStatus.BAD_REQUEST);
       } 
       return this.userService.create(userDto);

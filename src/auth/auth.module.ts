@@ -5,6 +5,8 @@ import { AuthGuard } from './guards/auth.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { CryptGuard } from './guards/crypt.guard';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { UserModule } from 'src/user/user.module';
+import { UserService } from 'src/user/user.service';
 
 @Module({
   imports: [ 
@@ -19,7 +21,8 @@ import { PrismaModule } from 'src/prisma/prisma.module';
   providers: [ 
     AuthService, 
     AuthGuard,
-    CryptGuard
+    CryptGuard,
+    UserService
   ],
   exports: [ AuthGuard , AuthService, CryptGuard ]
 })

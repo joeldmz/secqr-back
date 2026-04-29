@@ -12,7 +12,7 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.CREATED, description: 'User created sucessfully.' })
   register(@Body() userDto: User) {
     try {
-      if(!userDto.email || !userDto.password || !userDto.fullName) {
+      if(!userDto.email || !userDto.password || !userDto.firstName || !userDto.lastName) {
         throw new HttpException('Email, password, and full name are required.', HttpStatus.BAD_REQUEST);
       } 
       return this.authService.register(userDto);

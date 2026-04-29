@@ -1,36 +1,44 @@
 // src/auth/guards/jwt-auth.guard.ts
-import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  private readonly logger = new Logger('CryptGuard');
+  
+  constructor(private readonly jwtService: JwtService, private userService: UserService) {}
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
-    
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+
     try {
-      const request = context.switchToHttp().getRequest();
-      const token = request.headers.authorization?.split(' ')[1];
+        const request = context.switchToHttp().getRequest();
+        const token = request.headers.authorization?.split(' ')[1];
 
-      if (!token) {
-        throw new HttpException('Authorization token missing', HttpStatus.UNAUTHORIZED);
-      }
+        if (!token) {
+          throw new HttpException('Authorization token missing', HttpStatus.UNAUTHORIZED);
+        }
 
-      const payload = await this.jwtService.verifyAsync(token);
+        const payload = await this.jwtService.verifyAsync(token);
+        const userId = payload.sub;
 
-      request['user'] = { 
-          userId: payload.sub,
-          fullName: payload.username,
-          role: payload.role 
-      };
+        const user = await this.userService.findOne(userId)
 
-      return true; 
+        if(!user || !user.isActive) {
+          throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+        }
+        
+        request['user'] = { 
+            userId: payload.sub,
+            alias: payload.alias,
+            role: payload.role 
+        };
+
+        return true; 
 
     } catch (e: any) {
-      console.error('JWT Validation Error:', e.message);
-      throw new HttpException('Invalid or expired token', HttpStatus.UNAUTHORIZED);
+        this.logger.error('JWT Validation Error:', e.message);
+        throw new HttpException('Invalid or expired token', HttpStatus.UNAUTHORIZED);
     }
   }
 }

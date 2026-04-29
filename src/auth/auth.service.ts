@@ -1,54 +1,57 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { User, UserRole } from 'src/prisma/client/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { User } from 'src/prisma/client/client';
 import { CryptGuard } from './guards/crypt.guard';
-import { PrismaErrorService } from 'src/prisma/error.service';
 import { JwtService } from '@nestjs/jwt';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class AuthService {
     constructor(
-        private readonly prisma: PrismaService, 
         private crypto: CryptGuard,
-        private jwtService: JwtService
+        private jwtService: JwtService,
+        private userService: UserService
       ) {}
       
-    private logger = new Logger('User service');
+    private logger = new Logger('Auth service');
     
     async register(userModel: User) {
-        this.logger.log('creating user...');
+        this.logger.log('singing up...');
         try {
-            const hashedPassword = await this.crypto.hashPassword(userModel.password);
-            return await this.prisma.user.create({
-                data: {
-                    email: userModel.email,
-                    password: hashedPassword,
-                    fullName: userModel.fullName,
-                    role: userModel.role
-                },
-            });
+            userModel.password = await this.crypto.hashPassword(userModel.password);
+            const user = await this.userService.create(userModel)
+
+            const payload = { 
+                sub: user.id,
+                alias: user.alias,
+                role: user.role 
+            }
+
+            return {
+                access_token: await this.jwtService.signAsync(payload),
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    alias: user.alias
+                }
+            }
+
         } catch (error) {
-            this.logger.log('Error to create user:', error);
-            const dbError = PrismaErrorService.mapError(error)
-            throw new HttpException(
-                { 
-                    statusCode: dbError.httpStatus, 
-                    message: dbError.message 
-                }, 
-                dbError.httpStatus
-            );
+            this.logger.log('Error to signup user:', error);
+            throw error;
         }
     }
 
     async login(email: string, password: string) {
         this.logger.log('logging user...');
         try {
-            const user = await this.prisma.user.findUnique({
-                where: { email }
-            })
+            const user = await this.userService.findByEmail(email)
 
-            if (!user?.password) {
+            if (!user) {
                 throw new HttpException('Email or password incorrect.', HttpStatus.UNAUTHORIZED);
+            }
+
+            if(!user.isActive) {
+                throw new HttpException('User inactive.', HttpStatus.UNAUTHORIZED);
             }
 
             const isValidPassword = await this.crypto.comparePassword(password, user.password);
@@ -57,23 +60,16 @@ export class AuthService {
                 throw new HttpException('Email or password incorrect.', HttpStatus.UNAUTHORIZED);
             }
 
-             const payload = { 
-                sub: user.id, 
-                username: user.fullName, 
+            const payload = { 
+                sub: user.id,
+                alias: user.alias,
                 role: user.role 
             }
 
             return { access_token: await this.jwtService.signAsync(payload) };
         } catch (error) {
             this.logger.log('Error to logging user:', error);
-            const dbError = PrismaErrorService.mapError(error)
-            throw new HttpException(
-                { 
-                    statusCode: dbError.httpStatus, 
-                    message: dbError.message 
-                }, 
-                dbError.httpStatus
-            );
+            throw error;
         }
     }
 }
