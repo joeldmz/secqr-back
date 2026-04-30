@@ -1,27 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, UseInterceptors, ClassSerializerInterceptor, HttpException, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { UserService } from './user.service';
 import type { User } from 'src/prisma/client/client';
-import { ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  // @UseInterceptors(ClassSerializerInterceptor)
-  @Post()
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Usuario creado exitosamente.' })
-  create(@Body() userDto: User) {
-    try {
-      if(!userDto.email || !userDto.password || !userDto.firstName || !userDto.lastName ) {
-        throw new HttpException('Email, password, and full name are required.', HttpStatus.BAD_REQUEST);
-      } 
-      return this.userService.create(userDto);
-    } catch (error) {
-      throw error; 
-    }
-  }
 
   @UseGuards(AuthGuard)
   @Get()

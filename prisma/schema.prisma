@@ -35,6 +35,8 @@ model User {
   googleId        String?   @unique // Identificador de Google
   role            UserRole
   isActive        Boolean   @default(true)
+  resetToken      String?
+  confrimed       Boolean   @default(false)
   createdAt       DateTime  @default(now())
   
   // Relaciones

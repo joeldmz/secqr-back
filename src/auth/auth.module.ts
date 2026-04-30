@@ -7,10 +7,13 @@ import { CryptGuard } from './guards/crypt.guard';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 import { UserService } from 'src/user/user.service';
+import { MailModule } from 'src/mail/mail.module';
+import { MailService } from 'src/mail/mail.service';
 
 @Module({
   imports: [ 
     PrismaModule,
+    MailModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'ALTERNATIVE_KEY',
@@ -22,7 +25,8 @@ import { UserService } from 'src/user/user.service';
     AuthService, 
     AuthGuard,
     CryptGuard,
-    UserService
+    UserService,
+    MailService
   ],
   exports: [ AuthGuard , AuthService, CryptGuard ]
 })

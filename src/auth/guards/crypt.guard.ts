@@ -18,7 +18,7 @@ export class CryptGuard {
     async comparePassword(plainPassword: string, storedHash: string): Promise<boolean> {
         try {
             const match = await bcrypt.compare(plainPassword, storedHash);
-            return match; // Devuelve true o false
+            return match; // return true or false
         } catch (error) {
             this.logger.error('Failed to compare password', error);
             throw new Error("Failed to compare password");
