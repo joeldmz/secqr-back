@@ -3,7 +3,7 @@ import { MailService } from './mail.service';
 import { MailController } from './mail.controller';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/adapters/pug.adapter'
-
+import { join } from 'path';
 @Module({
   imports: [MailerModule.forRootAsync({
     useFactory: (): any => ({
@@ -23,7 +23,7 @@ import { PugAdapter } from '@nestjs-modules/mailer/adapters/pug.adapter'
         from: process.env.FROM,
       },
       template: {
-        dir: __dirname + '/../../templates',
+        dir: join(__dirname,'..', '..', 'templates'),
         adapter: new PugAdapter(),
         options: {
           strict: true,
