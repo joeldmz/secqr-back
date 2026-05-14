@@ -23,7 +23,7 @@ import { join } from 'path';
         from: process.env.FROM,
       },
       template: {
-        dir: join(__dirname,'..', '..', 'templates'),
+        dir: join(process.cwd(), 'dist/templates'),
         adapter: new PugAdapter(),
         options: {
           strict: true,
