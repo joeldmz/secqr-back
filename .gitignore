@@ -62,7 +62,5 @@ prisma/migrations/
 eslint.config.mjs
 nest-cli.json
 package-lock.json
-prisma.config.ts
 prisma/migrations/
 tsconfig.build.json
-tsconfig.json
