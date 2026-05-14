@@ -20,10 +20,10 @@ import { join } from 'path';
           }
       },
       defaults: {
-        from: process.env.FROM,
+        from: process.env.SMTP_FROM,
       },
       template: {
-        dir: join(process.cwd(), 'dist/templates'),
+        dir: join(__dirname,'..', '..', 'templates'),
         adapter: new PugAdapter(),
         options: {
           strict: true,
