@@ -17,14 +17,16 @@ export class MailService {
                 context: params.context
             };
 
+            console.log('----------------->',this.mailerService.getTransporter().options);
+
             const response = await this.mailerService.sendMail(mailParams);
 
             this.logger.log(
-                `Email sent successfully to recipients with the following parameters : ${JSON.stringify(
-                mailParams,
-            )}`,
-            response,
-      );
+                        `Email sent successfully to recipients with the following parameters : ${JSON.stringify(
+                        mailParams,
+                    )}`,
+                    response,
+            );
         } catch (error) {
             this.logger.error(`Error while sending mail`, error );
             throw error;
