@@ -34,9 +34,10 @@ model User {
   password        String   // Solo si el login es por usuario/contraseña
   googleId        String?   @unique // Identificador de Google
   role            UserRole
-  isActive        Boolean   @default(true)
-  resetToken      String?
-  confrimed       Boolean   @default(false)
+  active          Boolean   @default(true)
+  token           String?
+  url             String?
+  confirmed       Boolean   @default(false)
   createdAt       DateTime  @default(now())
   
   // Relaciones

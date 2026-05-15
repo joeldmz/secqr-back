@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class CryptGuard {
-    private readonly logger = new Logger('CryptGuard');
+export class CryptoService {
+    private readonly logger = new Logger('CryptoService');
     
     async hashPassword(password: string): Promise<string> {
         try {
@@ -18,7 +18,7 @@ export class CryptGuard {
     async comparePassword(plainPassword: string, storedHash: string): Promise<boolean> {
         try {
             const match = await bcrypt.compare(plainPassword, storedHash);
-            return match; // return true or false
+            return match;
         } catch (error) {
             this.logger.error('Failed to compare password', error);
             throw new Error("Failed to compare password");

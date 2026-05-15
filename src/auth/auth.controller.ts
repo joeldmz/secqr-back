@@ -1,5 +1,5 @@
 import { Body, Controller, HttpException, HttpStatus, Param, Post, Request } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService } from './services/auth.service';
 import { ApiResponse } from '@nestjs/swagger';
 import type { User } from 'src/prisma/client/client';
 

@@ -4,13 +4,13 @@ import { JsonWebTokenError } from "@nestjs/jwt";
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from "@prisma/client/runtime/client";
 
 @Catch()
-export class GlobaHttpExceptionlFilter implements ExceptionFilter { 
+export class GlobaHttpExceptionsFilter implements ExceptionFilter { 
     constructor(private readonly httpAdapterHost: AbstractHttpAdapter) {}
     catch(exception: unknown, host: ArgumentsHost): void {
         const ctx = host.switchToHttp();
         const httpAdapter = this.httpAdapterHost;
 
-        let errorMessage: unknown;
+        let errorMessage: string | string[] = 'An unexpected error occurred';
         let httpStatus: number = HttpStatus.INTERNAL_SERVER_ERROR;
 
         if (exception instanceof PrismaClientValidationError) {
@@ -18,20 +18,16 @@ export class GlobaHttpExceptionlFilter implements ExceptionFilter {
             httpStatus = HttpStatus.CONFLICT;
         }
 
-        if (exception instanceof PrismaClientKnownRequestError) { 
-            const code = exception?.code || 'UNKNOWN_PRISMA_ERROR';
+        if (exception instanceof PrismaClientKnownRequestError) {
+            const code = exception.code ?? 'UNKNOWN_ERROR';
             if (code === 'P2002') {
                 errorMessage = 'Data validation -> Attribute aleady exist';
                 httpStatus = HttpStatus.CONFLICT;
-            }
-
-            if (code === 'P1001') {
+            } else if (code === 'P1001') {
                 errorMessage = 'Internal error -> Database not recheable';
-                httpStatus = HttpStatus.CONFLICT;
-            }
-
-            else {
-                errorMessage = `Error (${code}): ${exception.message}`;
+                httpStatus = HttpStatus.SERVICE_UNAVAILABLE;
+            } else {
+                errorMessage = `Error (${code})`;
                 httpStatus = HttpStatus.BAD_REQUEST;
             }
         }
@@ -42,12 +38,13 @@ export class GlobaHttpExceptionlFilter implements ExceptionFilter {
         }
 
         if(exception instanceof HttpException) {
-            errorMessage = exception.getResponse();
-            httpStatus = exception.getStatus()
+            const res = exception.getResponse();
+            errorMessage = typeof res === 'string' ? res : (res as any)?.message ?? res;
+            httpStatus = exception.getStatus();
         }
 
         const errorResponse = {
-            errors: typeof errorMessage === 'string' ? [errorMessage] : errorMessage,
+            errors: Array.isArray(errorMessage) ? errorMessage : [errorMessage],
         };
         
         httpAdapter.reply(ctx.getResponse(), errorResponse, httpStatus);

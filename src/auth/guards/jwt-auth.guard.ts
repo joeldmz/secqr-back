@@ -4,8 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
-  private readonly logger = new Logger('CryptGuard');
+export class JwtAuthGuard implements CanActivate {
+  private readonly logger = new Logger('JwtAuthGuard');
   
   constructor(private readonly jwtService: JwtService, private userService: UserService) {}
 
@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
 
         const user = await this.userService.findOne(userId)
 
-        if(!user || !user.isActive) {
+        if(!user || !user.active || !user.confirmed) {
           throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
         }
         
