@@ -36,7 +36,7 @@ export class AuthService {
                     template: 'signup-confirmation-template',
                     context: {
                         name: user.alias,
-                        verificationLink: `https://mypage/recover-password/${token}`
+                        verificationLink: `${process.env.CLIENT_URL}/recover-password/${token}`
                     },
                 }
             )
